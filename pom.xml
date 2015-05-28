@@ -62,6 +62,18 @@
         <enabled>true</enabled>
       </releases>
     </repository>
+    
+    <repository>
+      <id>cloudera</id>
+      <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
+      <snapshots>
+          <enabled>true</enabled>
+      </snapshots>
+      <releases>
+          <enabled>true</enabled>
+      </releases>
+    </repository>
+    
     <repository>
       <id>clojars</id>
       <url>https://clojars.org/repo/</url>
@@ -138,14 +150,20 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-core</artifactId>
-      <version>1.2.1</version>
+      <version>2.6.0-mr1-cdh5.4.0-SNAPSHOT</version>
       <scope>provided</scope>
+    </dependency>
+    
+    <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapred</artifactId>
+        <version>0.22.0</version>
     </dependency>
     
     <dependency>
 	<groupId>org.apache.hadoop</groupId>
 	<artifactId>hadoop-common</artifactId>
-        <version>2.5.1</version>
+        <version>0.22.0</version>
     </dependency>
     
     <dependency>
@@ -174,13 +192,18 @@
 	<version>1.3.4</version>
     </dependency>
     
-
+    <dependency>
+        <groupId>backtype</groupId>
+        <artifactId>cascading-thrift</artifactId>
+        <version>0.2.3</version>
+    </dependency>
 
 <dependency>
-	<groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-mapred</artifactId>
-        <version>0.22.0</version>
+    <groupId>elephantdb</groupId>
+    <artifactId>elephantdb</artifactId>
+    <version>0.5.1</version>
 </dependency>
+
 
 <dependency>
    <groupId>cascading</groupId>

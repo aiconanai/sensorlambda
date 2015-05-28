@@ -19,22 +19,25 @@ import com.backtype.cascading.tap.PailTap.PailTapOptions;
 import com.backtype.hadoop.pail.Pail;
 import com.backtype.hadoop.pail.PailSpec;
 import com.backtype.hadoop.pail.PailStructure;
+import com.mycompany.mavenpails2.Data;
+import com.mycompany.mavenpails2.DataUnit;
 import com.twitter.maple.tap.StdoutTap;
+import java.io.IOException;
+import java.util.*;
 import jcascalog.Api;
 import jcascalog.Fields;
 import jcascalog.Option;
 import jcascalog.Subquery;
 import jcascalog.op.Count;
+import jcascalog.op.LT;
+import jcascalog.op.GT;
 import jcascalog.op.Sum;
-import com.mycompany.mavenpails2.Data;
-import com.mycompany.mavenpails2.DataUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
-import java.io.IOException;
-import java.util.*;
+import jcascalog.op.Count;
 
 /**
  *
@@ -47,9 +50,7 @@ public class PailMove {
     public static final String MASTER_DATA_LOCATION = "/tmp/masterData";
     public static final String SNAPSHOT_LOCATION = "/tmp/swa/newDataSnapshot";
     public static final String SHREDDED_DATA_LOCATION = "/tmp/swa/shredded";
-    public static final String NORMALIZED_URLS_LOCATION = "/tmp/swa/normalized_urls";
-    public static final String NORMALIZED_PAGEVIEW_LOCATION = "/tmp/swa/normalized_pageview_users";
-    public static final String UNIQUE_PAGEVIEW_LOCATION = "/tmp/swa/unique_pageviews";
+    
     
     public static void mergeData(String masterDir, String updateDir) throws IOException {
         Pail target = new Pail(masterDir);
@@ -80,7 +81,7 @@ public class PailMove {
         
      
         Pail snapshotPail = newDataPail.snapshot(SNAPSHOT_LOCATION);
-        shred();
+        //shred();
         appendNewData(masterPail, snapshotPail);
         //consolidateAndAbsord(masterPail, new Pail(SHREDDED_DATA_LOCATION));
         newDataPail.deleteSnapshot(snapshotPail); 
@@ -93,11 +94,11 @@ public class PailMove {
     } */
 
     
-    public static PailTap attributeTap(String path, final DataUnit._Fields... fields) {
+    public static PailTap attributeTap(String path, final Data._Fields... fields) {
         PailTap.PailTapOptions opts = new PailTap.PailTapOptions();
         opts.attrs = new List[] {
         new ArrayList<String>() {{
-            for (DataUnit._Fields field: fields) {
+            for (Data._Fields field: fields) {
                  add("" + field.getThriftFieldId());
             }
         }}
@@ -138,10 +139,30 @@ public class PailMove {
         Pail shreddedPail = shred();
         masterPail.absorb(shreddedPail);
     }
+    
+    
+    
+    public static Subquery getValue(){
+        PailTap masterData = splitDataTap("/tmp/masterData");
+        Subquery getV = new Subquery("?id", "?value", "?time")
+                .predicate(masterData, "_","?data")
+                .predicate(new ExtractValueFields(), "?data")
+                .out("?id", "?value","?time")
+                .predicate(new GT(), "?time", 3);                                
+        return getV;       
+    } 
+    
+    
+    
+    public static void readPail() throws IOException{
+        Pail<Data> datapail = new Pail<Data>("/tmp/masterData");
+        for (Data d: datapail){
+            System.out.println(d.dataunit + " -> "+ d.pedigree);
+        }
+    }
    
     public static void main(String args[]) throws Exception {
         setApplicationConf();
-        System.out.println("holanda");
         LocalFileSystem fs = FileSystem.getLocal(new Configuration());
         Pail newDataPail;
         Pail masterPail;
@@ -172,11 +193,13 @@ public class PailMove {
         // shred();
         
         ingest(masterPail, newDataPail);
+        Api.execute(new StdoutTap(), getValue());
+        //readPail();
         //normalizeURLs();
 // normalizeUserIds();
        // deduplicatePageviews();
         //pageviewBatchView();
-        //Api.execute(new StdoutTap(),bouncesView());
+        
         //bouncesView();
     }
     
