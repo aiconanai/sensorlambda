@@ -19,14 +19,21 @@ public class ExtractValueFields extends CascalogFunction {
   @Override
   public void operate(FlowProcess process, FunctionCall call){
       Data data = (Data) call.getArguments().getObject(0);
+      DataUnit du = data.getDataunit();
       SensorPropertyValue sp = data.getDataunit().getSensor_property().getProperty();
       
-      if(sp.getSetField() == SensorPropertyValue._Fields.VALUE){
+     
+      if(sp.getSetField() == SensorPropertyValue._Fields.TIPO.VALUE){
+           System.out.println("LLEGUE HASTA AQUI");
           //Crea la tupla con Id, Value y Timestamp
+          
           call.getOutputCollector().add(
-            new Tuple(data.getDataunit().getSensor_property().getId().getSensor_id(), sp.getValue()
-                       , data.getPedigree().getTrue_as_of_secs()));
-         
+            new Tuple(du.getSensor_property().getId().getSensor_id(),                   
+                    data.getPedigree().getTrue_as_of_secs(),
+                    du.getSensor_property().getProperty().getValue(),                 
+                    du.getSensor_property().getProperty().getTipo()
+                    ));
+          
       }
   }  
 }

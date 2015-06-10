@@ -22,6 +22,10 @@ import com.backtype.hadoop.pail.PailStructure;
 import com.mycompany.mavenpails2.Data;
 import com.mycompany.mavenpails2.DataUnit;
 import com.twitter.maple.tap.StdoutTap;
+import elephantdb.DomainSpec;
+import elephantdb.jcascalog.EDB;
+import elephantdb.partition.HashModScheme;
+import elephantdb.persistence.JavaBerkDB;
 import java.io.IOException;
 import java.util.*;
 import jcascalog.Api;
@@ -133,6 +137,7 @@ public class PailMove {
         Pail shreddedPail = new Pail(SHREDDED_DATA_LOCATION);
         shreddedPail.consolidate();
         return shreddedPail;
+        
     }
     
     public static void appendNewData(Pail masterPail, Pail snapshotPail) throws IOException{
@@ -143,12 +148,14 @@ public class PailMove {
     
     
     public static Subquery getValue(){
+       
         PailTap masterData = splitDataTap("/tmp/masterData");
-        Subquery getV = new Subquery("?id", "?value", "?time")
+        Subquery getV = new Subquery("?value")
                 .predicate(masterData, "_","?data")
                 .predicate(new ExtractValueFields(), "?data")
-                .out("?id", "?value","?time")
-                .predicate(new GT(), "?time", 3);                                
+                .out("?id","?time","?value","?tipo");
+                
+                                               
         return getV;       
     } 
     
@@ -160,6 +167,10 @@ public class PailMove {
             System.out.println(d.dataunit + " -> "+ d.pedigree);
         }
     }
+    
+    // A PARTIR DE AQUÍ, SERVING LAYER
+    
+  
    
     public static void main(String args[]) throws Exception {
         setApplicationConf();
@@ -181,20 +192,22 @@ public class PailMove {
         }
         
         Pail.TypedRecordOutputStream out = newDataPail.openWrite();
-        out.writeObject(GenerateData.getValue(1, 1394380536, 5123));
+        out.writeObject(GenerateData.getColumns(1, 200000002, 5123, 2, 0, 10, 1));
+        
+        /*out.writeObject(GenerateData.getValue(1, 1394380536, 5123));
         out.writeObject(GenerateData.getValue(1, 1394380944, 5251));
         
         out.writeObject(GenerateData.getValue(2, 1394380536, 35));
         out.writeObject(GenerateData.getValue(1, 1394380944, 30));
         
         out.writeObject(GenerateData.getValue(3, 1394380530, 1023));
-        out.writeObject(GenerateData.getValue(3, 1394380944, 1200));
+        out.writeObject(GenerateData.getValue(3, 1394380944, 1200)); */
         out.close();
         // shred();
         
         ingest(masterPail, newDataPail);
         Api.execute(new StdoutTap(), getValue());
-        //readPail();
+        readPail();
         //normalizeURLs();
 // normalizeUserIds();
        // deduplicatePageviews();
