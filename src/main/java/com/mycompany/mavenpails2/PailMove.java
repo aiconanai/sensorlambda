@@ -26,6 +26,8 @@ import elephantdb.DomainSpec;
 import elephantdb.jcascalog.EDB;
 import elephantdb.partition.HashModScheme;
 import elephantdb.persistence.JavaBerkDB;
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
 import jcascalog.Api;
@@ -150,13 +152,23 @@ public class PailMove {
     public static Subquery getValue(){
        
         PailTap masterData = splitDataTap("/tmp/masterData");
-        Subquery getV = new Subquery("?value")
+        Subquery a = new Subquery("?id", "?time","?value")
                 .predicate(masterData, "_","?data")
                 .predicate(new ExtractValueFields(), "?data")
-                .out("?id","?time","?value","?tipo");
+                .out("?id","?value","?time");    
+        Subquery b = new Subquery("?id", "?tipo", "?time")
+                .predicate(masterData, "_","?data")
+                .predicate(new ExtractTypeField(), "?data")
+                .out("?id","?tipo", "?time");
+        Subquery x = new Subquery("?id", "?value","?tipo","?time")
+                .predicate(a, "?id", "?time", "?value")
+                .predicate(b, "?id", "?tipo", "?time");
+        Subquery y = new Subquery("?id", "?hour-bucket")
+                .predicate(x, "?id", "?value","?tipo", "?time")
+                .predicate(new ToHourBucket(), "?time").out("?hour-bucket")
+                ;
                 
-                                               
-        return getV;       
+        return y;       
     } 
     
     
@@ -191,23 +203,50 @@ public class PailMove {
             masterPail = new Pail<Data>(MASTER_DATA_LOCATION);
         }
         
-        Pail.TypedRecordOutputStream out = newDataPail.openWrite();
-        out.writeObject(GenerateData.getColumns(1, 200000002, 5123, 2, 0, 10, 1));
+       /* try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+        String line;
+            while ((line = br.readLine()) != null) {
+                
+            }
+        } */
+
         
-        /*out.writeObject(GenerateData.getValue(1, 1394380536, 5123));
-        out.writeObject(GenerateData.getValue(1, 1394380944, 5251));
+       /* Pail.TypedRecordOutputStream out = newDataPail.openWrite();
+   
+        out.writeObject(GenerateData.setValue(1, 1434153600, 5123));
+        out.writeObject(GenerateData.setTipo(1, 1434153600, 1));
+        out.writeObject(GenerateData.setPos(1, 1434153600, 10, 5, 1, 2, 0, 10));
         
-        out.writeObject(GenerateData.getValue(2, 1394380536, 35));
-        out.writeObject(GenerateData.getValue(1, 1394380944, 30));
+        out.writeObject(GenerateData.setValue(2, 1434153600, 25));
+        out.writeObject(GenerateData.setTipo(2, 1434153600, 3));
+        out.writeObject(GenerateData.setPos(2, 1434153600, 10, 7, 2, 2, 0, 1));
         
-        out.writeObject(GenerateData.getValue(3, 1394380530, 1023));
-        out.writeObject(GenerateData.getValue(3, 1394380944, 1200)); */
-        out.close();
+        out.writeObject(GenerateData.setValue(2, 1434153660, 22));
+        out.writeObject(GenerateData.setTipo(2, 1434153660, 3));
+        out.writeObject(GenerateData.setPos(2, 1434153660, 10, 7, 2, 2, 0, 1));
+        
+        out.writeObject(GenerateData.setValue(2, 1434153660, 22));
+        out.writeObject(GenerateData.setTipo(2, 1434153660, 3));
+        out.writeObject(GenerateData.setPos(2, 1434153660, 10, 7, 2, 2, 0, 1));
+        
+        out.writeObject(GenerateData.setValue(2, 1434153720, 22));
+        out.writeObject(GenerateData.setTipo(2, 1434153720, 3));
+        out.writeObject(GenerateData.setPos(2, 1434153720, 10, 7, 2, 2, 0, 1));
+        
+        out.writeObject(GenerateData.setValue(3, 1434153720, 34));
+        out.writeObject(GenerateData.setTipo(3, 1434153720, 2));
+        out.writeObject(GenerateData.setPos(3, 1434153720, 5, 10, 1, 2, 10, 2));
+        
+        out.writeObject(GenerateData.setValue(1, 1434153660, 1242));
+        out.writeObject(GenerateData.setTipo(1, 1434153660, 1));
+        out.writeObject(GenerateData.setPos(1, 1434153660, 10, 5, 1, 2, 0, 10));
+        
+        out.close(); */
         // shred();
         
         ingest(masterPail, newDataPail);
         Api.execute(new StdoutTap(), getValue());
-        readPail();
+        //readPail();
         //normalizeURLs();
 // normalizeUserIds();
        // deduplicatePageviews();
