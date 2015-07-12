@@ -14,11 +14,11 @@ import cascalog.ops.IdentityBuffer;
 import cascalog.ops.RandLong;
 import clojure.lang.Keyword;
 import clojure.lang.PersistentStructMap;
-import com.backtype.cascading.tap.PailTap;
-import com.backtype.cascading.tap.PailTap.PailTapOptions;
-import com.backtype.hadoop.pail.Pail;
-import com.backtype.hadoop.pail.PailSpec;
-import com.backtype.hadoop.pail.PailStructure;
+import backtype.cascading.tap.PailTap;
+import backtype.cascading.tap.PailTap.PailTapOptions;
+import backtype.hadoop.pail.Pail;
+import backtype.hadoop.pail.PailSpec;
+import backtype.hadoop.pail.PailStructure;
 import com.mycompany.mavenpails2.Data;
 import com.mycompany.mavenpails2.DataUnit;
 import com.twitter.maple.tap.StdoutTap;
@@ -27,6 +27,7 @@ import elephantdb.jcascalog.EDB;
 import elephantdb.partition.HashModScheme;
 import elephantdb.persistence.JavaBerkDB;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
@@ -38,12 +39,17 @@ import jcascalog.op.Count;
 import jcascalog.op.LT;
 import jcascalog.op.GT;
 import jcascalog.op.Sum;
+import jcascalog.op.Max;
+import jcascalog.op.Avg;
+import jcascalog.op.Equals;
+import jcascalog.op.Min;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
-import jcascalog.op.Count;
+
+
 
 /**
  *
@@ -147,11 +153,9 @@ public class PailMove {
         masterPail.absorb(shreddedPail);
     }
     
-    
-    
-    public static Subquery getValue(){
-       
-        PailTap masterData = splitDataTap("/tmp/masterData");
+   
+    public static Subquery FactsJoin(){
+    PailTap masterData = splitDataTap("/tmp/masterData");
         Subquery a = new Subquery("?id", "?time","?value")
                 .predicate(masterData, "_","?data")
                 .predicate(new ExtractValueFields(), "?data")
@@ -163,13 +167,62 @@ public class PailMove {
         Subquery x = new Subquery("?id", "?value","?tipo","?time")
                 .predicate(a, "?id", "?time", "?value")
                 .predicate(b, "?id", "?tipo", "?time");
-        Subquery y = new Subquery("?id", "?hour-bucket")
-                .predicate(x, "?id", "?value","?tipo", "?time")
-                .predicate(new ToHourBucket(), "?time").out("?hour-bucket")
-                ;
+        return x;
+    }
+    
+    
+    public static Subquery TempBatchView(){
+       /*
+        Esta Query toma el batch join previamente hecho y calcula la 
+        Batch View de los termómetros
+        */
+        Object source = Api.hfsSeqfile("/tmp/joins");
+        Subquery y = new Subquery("?id", "?value","?tipo","?time")
+                .predicate(source, "?id", "?value","?tipo", "?time")
+                .predicate(new Equals(), "?tipo", "Termometro");
+        Subquery z = new Subquery("?id","?twenty","?avg")
+                .predicate(y, "?id", "?value", "?tipo", "?time")
+                .predicate(new ToTwentyBucket(), "?time").out("?twenty")
+                .predicate(new Avg(), "?value").out("?avg");
                 
-        return y;       
+        return z;       
     } 
+    
+    public static Subquery AnemBatchView1(){
+        Object source = Api.hfsSeqfile("/tmp/joins");
+        Subquery y = new Subquery("?id", "?value","?tipo","?time")
+                .predicate(source, "?id", "?value","?tipo", "?time")
+                .predicate(new Equals(), "?tipo", "Anemometro");
+        Subquery z = new Subquery("?id","?twenty","?avg")
+                .predicate(y, "?id", "?value", "?tipo", "?time")
+                .predicate(new ToTwentyBucket(), "?time").out("?twenty")
+                .predicate(new Avg(), "?value").out("?avg");
+        return z;
+    }
+    
+    public static Subquery AnemBatchView2(){
+        Object source = Api.hfsSeqfile("/tmp/joins");
+        Subquery y = new Subquery("?id", "?value","?tipo","?time")
+                .predicate(source, "?id", "?value","?tipo", "?time")
+                .predicate(new Equals(), "?tipo", "Anemometro");
+        Subquery z = new Subquery("?id","?ten","?max")
+                .predicate(y, "?id", "?value", "?tipo", "?time")
+                .predicate(new ToTenBucket(), "?time").out("?ten")
+                .predicate(new Max(), "?value").out("?max");
+        return z;
+    }
+    
+    public static Subquery AccelBatchView1(){
+        Object source = Api.hfsSeqfile("/tmp/joins");
+        Subquery y = new Subquery("?id", "?value","?tipo","?time")
+                .predicate(source, "?id", "?value","?tipo", "?time")
+                .predicate(new Equals(), "?tipo", "Acelerometro");
+        Subquery z = new Subquery("?id","?twenty","?max")
+                .predicate(y, "?id", "?value", "?tipo", "?time")
+                .predicate(new ToTwentyBucket(), "?time").out("?twenty")
+                .predicate(new Max(), "?value").out("?max");
+        return z;
+    }
     
     
     
@@ -180,13 +233,35 @@ public class PailMove {
         }
     }
     
-    // A PARTIR DE AQUÍ, SERVING LAYER
+    public static void deleteFolder(File folder) {
+    File[] files = folder.listFiles();
+    if(files!=null) { //some JVMs return null for empty dirs
+        for(File f: files) {
+            if(f.isDirectory()) {
+                deleteFolder(f);
+            } else {
+                f.delete();
+            }
+        }
+    }
+    folder.delete();
+    }
     
-  
+    public static void prepWork(){
+        Object source = Api.hfsSeqfile("/tmp/joins");
+        Api.execute(new StdoutTap(), FactsJoin());
+        Api.execute(source, FactsJoin());
+    }
+    // A PARTIR DE AQUÍ, SERVING LAYER
    
     public static void main(String args[]) throws Exception {
+        //Los primeros pasos son establecer la configuración de Hadoop. 
         setApplicationConf();
         LocalFileSystem fs = FileSystem.getLocal(new Configuration());
+        /* Luego creamos Los dos pails necesarios para alojar el masterdataset
+        NewDataPail contendrá los registros nuevos y éstos se añadirán al 
+        MasterPail, que es el master dataset.
+        */
         Pail newDataPail;
         Pail masterPail;
         Path fils = new Path(NEW_DATA_LOCATION);
@@ -202,57 +277,79 @@ public class PailMove {
         } else {
             masterPail = new Pail<Data>(MASTER_DATA_LOCATION);
         }
+       
+        /*
+        La siguiente rutina toma un archivo de texto de la carpeta resources
+        y la desmembra para insertar sus datos en el newDataPail.
+        */
         
-       /* try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-        String line;
-            while ((line = br.readLine()) != null) {
-                
-            }
-        } */
-
-        
-       /* Pail.TypedRecordOutputStream out = newDataPail.openWrite();
-   
-        out.writeObject(GenerateData.setValue(1, 1434153600, 5123));
-        out.writeObject(GenerateData.setTipo(1, 1434153600, 1));
-        out.writeObject(GenerateData.setPos(1, 1434153600, 10, 5, 1, 2, 0, 10));
-        
-        out.writeObject(GenerateData.setValue(2, 1434153600, 25));
-        out.writeObject(GenerateData.setTipo(2, 1434153600, 3));
-        out.writeObject(GenerateData.setPos(2, 1434153600, 10, 7, 2, 2, 0, 1));
-        
-        out.writeObject(GenerateData.setValue(2, 1434153660, 22));
-        out.writeObject(GenerateData.setTipo(2, 1434153660, 3));
-        out.writeObject(GenerateData.setPos(2, 1434153660, 10, 7, 2, 2, 0, 1));
-        
-        out.writeObject(GenerateData.setValue(2, 1434153660, 22));
-        out.writeObject(GenerateData.setTipo(2, 1434153660, 3));
-        out.writeObject(GenerateData.setPos(2, 1434153660, 10, 7, 2, 2, 0, 1));
-        
-        out.writeObject(GenerateData.setValue(2, 1434153720, 22));
-        out.writeObject(GenerateData.setTipo(2, 1434153720, 3));
-        out.writeObject(GenerateData.setPos(2, 1434153720, 10, 7, 2, 2, 0, 1));
-        
-        out.writeObject(GenerateData.setValue(3, 1434153720, 34));
-        out.writeObject(GenerateData.setTipo(3, 1434153720, 2));
-        out.writeObject(GenerateData.setPos(3, 1434153720, 5, 10, 1, 2, 10, 2));
-        
-        out.writeObject(GenerateData.setValue(1, 1434153660, 1242));
-        out.writeObject(GenerateData.setTipo(1, 1434153660, 1));
-        out.writeObject(GenerateData.setPos(1, 1434153660, 10, 5, 1, 2, 0, 10));
-        
-        out.close(); */
+       /*Pail.TypedRecordOutputStream out = newDataPail.openWrite();
+       PailMove c = new PailMove();
+       Class cls = c.getClass(); 
+       File file = new File(cls.getClassLoader().getResource("dataset.txt").getFile());
+ 
+	try (Scanner scanner = new Scanner(file)) {
+ 
+		while (scanner.hasNextLine()) {
+			String line = scanner.nextLine();
+			//result.append(line).append("\n");                       
+                        StringTokenizer tkn = new StringTokenizer(line);
+                        String sid = tkn.nextToken();
+                        String stime = tkn.nextToken();
+                        String stipo = tkn.nextToken();
+                        String seje1 = tkn.nextToken();
+                        String seje2 = tkn.nextToken();
+                        String selev = tkn.nextToken();
+                        String sx = tkn.nextToken();
+                        String sy = tkn.nextToken();
+                        String sz = tkn.nextToken();
+                        String svalue = tkn.nextToken();
+                        if(!tkn.hasMoreTokens()){
+                            long id = Long.parseLong(sid);
+                            int time = Integer.parseInt(stime);
+                            int tipo = Integer.parseInt(stipo);
+                            int eje1 = Integer.parseInt(seje1);
+                            int eje2 = Integer.parseInt(seje2);
+                            int elev = Integer.parseInt(selev);
+                            int posx = Integer.parseInt(sx);
+                            int posy = Integer.parseInt(sy);
+                            int posz = Integer.parseInt(sz);
+                            long value = Long.parseLong(svalue);
+                                              
+                            out.writeObject(GenerateData.setValue(id, time, value));
+                            out.writeObject(GenerateData.setTipo(id, time, tipo));
+                            out.writeObject(GenerateData.setPos(id, time, eje1, eje2, elev, posx,
+                                                                posy, posz));
+                             
+                        }                    
+		}
+                out.close();
+		scanner.close();
+	} catch (IOException e) {
+		e.printStackTrace();
+	} */
         // shred();
         
-        ingest(masterPail, newDataPail);
-        Api.execute(new StdoutTap(), getValue());
-        //readPail();
-        //normalizeURLs();
-// normalizeUserIds();
-       // deduplicatePageviews();
-        //pageviewBatchView();
         
-        //bouncesView();
+        /* Ingest es una serie de pasos para finalmente insertar el newData en el
+        master dataset, evitando duplicancia de datos y corrupción.
+        */
+        ingest(masterPail, newDataPail);
+        // Prepwork crea un join de datos con el fin de cáclular las Batch Views
+        prepWork();
+        //Finalmente se calculan las Batch Views.
+        Api.execute(new StdoutTap(), TempBatchView());
+        Api.execute(new StdoutTap(), AnemBatchView1());
+        Api.execute(new StdoutTap(), AnemBatchView2());
+        Api.execute(new StdoutTap(), AccelBatchView1());
+        
+        /* Elminiamos el directorio temporal joins
+           (Debe haber una mejor forma de hacer esto)
+        */
+        File index = new File("/tmp/joins");
+        deleteFolder(index);
+        //readPail();
+
     }
     
 }
