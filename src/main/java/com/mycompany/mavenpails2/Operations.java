@@ -6,10 +6,10 @@
 package com.mycompany.mavenpails2;
 
 import java.io.IOException;
-import com.backtype.hadoop.pail.Pail;
-import com.backtype.hadoop.pail.Pail.TypedRecordOutputStream;
-import com.backtype.hadoop.pail.PailSpec;
-import com.backtype.hadoop.pail.SequenceFileFormat;
+import backtype.hadoop.pail.Pail;
+import backtype.hadoop.pail.Pail.TypedRecordOutputStream;
+import backtype.hadoop.pail.PailSpec;
+import backtype.hadoop.pail.SequenceFileFormat;
 import java.util.HashMap;
 import java.util.Map;
 

@@ -5,7 +5,8 @@
  */
 package com.mycompany.mavenpails2;
 
-import com.backtype.hadoop.pail.PailStructure;
+
+import backtype.hadoop.pail.PailStructure;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TDeserializer;
 import org.apache.thrift.TException;

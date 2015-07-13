@@ -5,7 +5,7 @@
  */
 package com.mycompany.mavenpails2;
 
-import com.backtype.hadoop.pail.PailStructure;
+import backtype.hadoop.pail.PailStructure;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
