@@ -220,7 +220,7 @@ public class PailMove {
         Subquery z = new Subquery("?id","?twenty","?max")
                 .predicate(y, "?id", "?value", "?tipo", "?time")
                 .predicate(new ToTwentyBucket(), "?time").out("?twenty")
-                .predicate(new Max(), "?value").out("?max");
+                .predicate(new AbsMax(), "?value").out("?max");
         return z;
     }
     
@@ -283,7 +283,7 @@ public class PailMove {
         y la desmembra para insertar sus datos en el newDataPail.
         */
         
-       /*Pail.TypedRecordOutputStream out = newDataPail.openWrite();
+       Pail.TypedRecordOutputStream out = newDataPail.openWrite();
        PailMove c = new PailMove();
        Class cls = c.getClass(); 
        File file = new File(cls.getClassLoader().getResource("dataset.txt").getFile());
@@ -327,7 +327,7 @@ public class PailMove {
 		scanner.close();
 	} catch (IOException e) {
 		e.printStackTrace();
-	} */
+	} 
         // shred();
         
         
