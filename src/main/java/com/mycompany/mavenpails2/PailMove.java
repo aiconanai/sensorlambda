@@ -217,10 +217,10 @@ public class PailMove {
         Subquery y = new Subquery("?id", "?value","?tipo","?time")
                 .predicate(source, "?id", "?value","?tipo", "?time")
                 .predicate(new Equals(), "?tipo", "Acelerometro");
-        Subquery z = new Subquery("?id","?twenty","?max")
+        Subquery z = new Subquery("?id","?twenty","?absmax")
                 .predicate(y, "?id", "?value", "?tipo", "?time")
                 .predicate(new ToTwentyBucket(), "?time").out("?twenty")
-                .predicate(new AbsMax(), "?value").out("?max");
+                .predicate(new AbsMax(), "?value").out("?absmax");
         return z;
     }
     
@@ -249,10 +249,24 @@ public class PailMove {
     
     public static void prepWork(){
         Object source = Api.hfsSeqfile("/tmp/joins");
-        Api.execute(new StdoutTap(), FactsJoin());
+        //Api.execute(new StdoutTap(), FactsJoin());
         Api.execute(source, FactsJoin());
     }
     // A PARTIR DE AQUÍ, SERVING LAYER
+    
+    public static void accelElephantDB(Subquery accel){
+        Subquery toEdb = 
+                new Subquery("?key", "?value")
+                .predicate(accel, "?id", "?bucket", "?absmax")
+                .predicate(new ToIdBucketedKey(), "?id", "?bucket").out("?key")
+                .predicate(new ToSerializedInt(), "?absmax").out("?value");
+        
+        DomainSpec spec = new DomainSpec(new JavaBerkDB(),
+                                         new IdOnlyScheme(), 32);
+        
+        Object tap = EDB.makeKeyValTap("/tmp/outputs/acelerometros", spec);
+        Api.execute(new StdoutTap(), toEdb);
+    }
    
     public static void main(String args[]) throws Exception {
         //Los primeros pasos son establecer la configuración de Hadoop. 
@@ -283,7 +297,7 @@ public class PailMove {
         y la desmembra para insertar sus datos en el newDataPail.
         */
         
-       Pail.TypedRecordOutputStream out = newDataPail.openWrite();
+      /* Pail.TypedRecordOutputStream out = newDataPail.openWrite();
        PailMove c = new PailMove();
        Class cls = c.getClass(); 
        File file = new File(cls.getClassLoader().getResource("dataset.txt").getFile());
@@ -327,7 +341,7 @@ public class PailMove {
 		scanner.close();
 	} catch (IOException e) {
 		e.printStackTrace();
-	} 
+	} */
         // shred();
         
         
@@ -338,11 +352,14 @@ public class PailMove {
         // Prepwork crea un join de datos con el fin de cáclular las Batch Views
         prepWork();
         //Finalmente se calculan las Batch Views.
+        
+        Object source = Api.hfsSeqfile("/tmp/accel");
         Api.execute(new StdoutTap(), TempBatchView());
         Api.execute(new StdoutTap(), AnemBatchView1());
         Api.execute(new StdoutTap(), AnemBatchView2());
         Api.execute(new StdoutTap(), AccelBatchView1());
         
+        accelElephantDB(AccelBatchView1());
         /* Elminiamos el directorio temporal joins
            (Debe haber una mejor forma de hacer esto)
         */
