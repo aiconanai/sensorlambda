@@ -23,6 +23,10 @@ import com.mycompany.mavenpails2.Data;
 import com.mycompany.mavenpails2.DataUnit;
 import com.twitter.maple.tap.StdoutTap;
 import elephantdb.DomainSpec;
+import elephantdb.generated.DomainNotFoundException;
+import elephantdb.generated.DomainNotLoadedException;
+import elephantdb.generated.HostsDownException;
+import elephantdb.generated.keyval.ElephantDB;
 import elephantdb.jcascalog.EDB;
 import elephantdb.partition.HashModScheme;
 import elephantdb.persistence.JavaBerkDB;
@@ -30,7 +34,10 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import jcascalog.Api;
 import jcascalog.Fields;
 import jcascalog.Option;
@@ -48,6 +55,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.thrift.TException;
 
 
 
@@ -170,7 +178,7 @@ public class PailMove {
         return x;
     }
     
-    
+  
     public static Subquery TempBatchView(){
        /*
         Esta Query toma el batch join previamente hecho y calcula la 
@@ -217,11 +225,16 @@ public class PailMove {
         Subquery y = new Subquery("?id", "?value","?tipo","?time")
                 .predicate(source, "?id", "?value","?tipo", "?time")
                 .predicate(new Equals(), "?tipo", "Acelerometro");
-        Subquery z = new Subquery("?id","?twenty","?absmax")
+        Subquery z = new Subquery("?id","?twenty" ,"?absmax")
                 .predicate(y, "?id", "?value", "?tipo", "?time")
-                .predicate(new ToTwentyBucket(), "?time").out("?twenty")
+                .predicate(new ToTwentyBucket(), "?time").out("?twenty")              
                 .predicate(new AbsMax(), "?value").out("?absmax");
-        return z;
+        Subquery a = new Subquery("?id", "?gran", "?bucket", "?absmax2")
+                .predicate(z, "?id", "?twenty", "?absmax")
+                .predicate(new EmitGranularitiesAcc(), "?twenty")
+                    .out("?gran", "?bucket")
+                .predicate(new AbsMax(), "?absmax").out("?absmax2");
+        return a;
     }
     
     
@@ -257,17 +270,28 @@ public class PailMove {
     public static void accelElephantDB(Subquery accel){
         Subquery toEdb = 
                 new Subquery("?key", "?value")
-                .predicate(accel, "?id", "?bucket", "?absmax")
+                .predicate(accel, "?id","?granularity",  "?bucket", "?absmax")
                 .predicate(new ToIdBucketedKey(), "?id", "?bucket").out("?key")
                 .predicate(new ToSerializedInt(), "?absmax").out("?value");
         
         DomainSpec spec = new DomainSpec(new JavaBerkDB(),
-                                         new IdOnlyScheme(), 32);
+                                         new HashModScheme(), 32);
         
         Object tap = EDB.makeKeyValTap("/tmp/outputs/acelerometros", spec);
-        Api.execute(new StdoutTap(), toEdb);
+        Api.execute(tap, toEdb);
     }
+    
    
+    public static void clientQuery(ElephantDB.Client client,
+                                   String domain,
+                                   ByteBuffer key) {
+        try {
+            client.get(domain, key);
+        } catch (DomainNotFoundException | HostsDownException | DomainNotLoadedException | TException ex) {
+            Logger.getLogger(PailMove.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
     public static void main(String args[]) throws Exception {
         //Los primeros pasos son establecer la configuración de Hadoop. 
         setApplicationConf();
@@ -297,8 +321,8 @@ public class PailMove {
         y la desmembra para insertar sus datos en el newDataPail.
         */
         
-      /* Pail.TypedRecordOutputStream out = newDataPail.openWrite();
-       PailMove c = new PailMove();
+       Pail.TypedRecordOutputStream out = newDataPail.openWrite();
+      /* PailMove c = new PailMove();
        Class cls = c.getClass(); 
        File file = new File(cls.getClassLoader().getResource("dataset.txt").getFile());
  
@@ -359,14 +383,17 @@ public class PailMove {
         Api.execute(new StdoutTap(), AnemBatchView2());
         Api.execute(new StdoutTap(), AccelBatchView1());
         
-        accelElephantDB(AccelBatchView1());
+        //accelElephantDB(AccelBatchView1());
+       
+        
+        
         /* Elminiamos el directorio temporal joins
            (Debe haber una mejor forma de hacer esto)
         */
         File index = new File("/tmp/joins");
         deleteFolder(index);
         //readPail();
-
+        
     }
     
 }

@@ -50,6 +50,19 @@
         </executions>
       </plugin>
       
+      <plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-assembly-plugin</artifactId>
+  <configuration>
+    <archive>
+      <manifest>
+        <mainClass>com.mycompany.mavenpails2.PailMove</mainClass>
+      </manifest>
+    </archive>
+  </configuration>
+</plugin>
+      
+      
     </plugins>
   </build>
     <repositories>
@@ -104,25 +117,34 @@
       <version>1.2.1</version>
       <scope>test</scope>
     </dependency>
+    
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
       <version>1.5.1</version>
     </dependency>
+    
     <dependency>
       <groupId>jline</groupId>
       <artifactId>jline</artifactId>
       <version>0.9.94</version>
     </dependency>
+    
     <dependency>
       <groupId>cascalog</groupId>
       <artifactId>cascalog</artifactId>
       <version>1.10.0</version>
     </dependency>
+    
     <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
-      <version>1.2.16</version>
+      <version>1.2.17</version>
+    </dependency> 
+    <dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>slf4j-log4j12</artifactId>
+    <version>1.7.5</version>
     </dependency>
     <dependency>
       <groupId>backtype</groupId>
@@ -161,6 +183,11 @@
       </exclusions>
     </dependency>
     <dependency>
+        <groupId>elephantdb</groupId>
+        <artifactId>elephantdb-server</artifactId>
+        <version>0.4.5</version>
+    </dependency>
+    <dependency>
       <groupId>elephantdb</groupId>
       <artifactId>elephantdb-cascalog</artifactId>
       <version>0.4.5</version>
@@ -171,6 +198,7 @@
         </exclusion>
       </exclusions>
     </dependency>
+
     <dependency>
       <groupId>elephantdb</groupId>
       <artifactId>elephantdb-bdb</artifactId>
