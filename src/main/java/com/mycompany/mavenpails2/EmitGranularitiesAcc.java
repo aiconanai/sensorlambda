@@ -13,6 +13,7 @@ import cascalog.CascalogFunction;
 /**
  *
  * @author francisco
+ * Clase creada para emitir granularidades de hora, día, semana y mes.
  */
 public class EmitGranularitiesAcc extends CascalogFunction{
     @Override

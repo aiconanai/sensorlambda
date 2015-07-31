@@ -161,7 +161,10 @@ public class PailMove {
         masterPail.absorb(shreddedPail);
     }
     
-   
+    /*
+    Estos joins son idénticos en todas las batch views, por lo que se separa
+    para calcularlo solamente una vez.
+    */
     public static Subquery FactsJoin(){
     PailTap masterData = splitDataTap("/tmp/masterData");
         Subquery a = new Subquery("?id", "?time","?value")
@@ -178,7 +181,9 @@ public class PailMove {
         return x;
     }
     
-  
+   /*
+    Cálculo de la batch view de los termometros
+    */
     public static Subquery TempBatchView(){
        /*
         Esta Query toma el batch join previamente hecho y calcula la 
@@ -196,6 +201,9 @@ public class PailMove {
         return z;       
     } 
     
+    /*
+    Cálculo de la batch view de promedios de los anemómetros.
+    */
     public static Subquery AnemBatchView1(){
         Object source = Api.hfsSeqfile("/tmp/joins");
         Subquery y = new Subquery("?id", "?value","?tipo","?time")
@@ -208,6 +216,9 @@ public class PailMove {
         return z;
     }
     
+    /*
+    Cálculo de la batch view de peaks de los anemómetros
+    */
     public static Subquery AnemBatchView2(){
         Object source = Api.hfsSeqfile("/tmp/joins");
         Subquery y = new Subquery("?id", "?value","?tipo","?time")
@@ -220,6 +231,9 @@ public class PailMove {
         return z;
     }
     
+    /*
+    Cálculo de las batch views de los acelerómetros.
+    */
     public static Subquery AccelBatchView1(){
         Object source = Api.hfsSeqfile("/tmp/joins");
         Subquery y = new Subquery("?id", "?value","?tipo","?time")
@@ -321,8 +335,8 @@ public class PailMove {
         y la desmembra para insertar sus datos en el newDataPail.
         */
         
-       Pail.TypedRecordOutputStream out = newDataPail.openWrite();
-      /* PailMove c = new PailMove();
+       /*Pail.TypedRecordOutputStream out = newDataPail.openWrite();
+       PailMove c = new PailMove();
        Class cls = c.getClass(); 
        File file = new File(cls.getClassLoader().getResource("dataset.txt").getFile());
  
@@ -383,16 +397,20 @@ public class PailMove {
         Api.execute(new StdoutTap(), AnemBatchView2());
         Api.execute(new StdoutTap(), AccelBatchView1());
         
-        //accelElephantDB(AccelBatchView1());
-       
-        
-        
+        accelElephantDB(AccelBatchView1());
+
         /* Elminiamos el directorio temporal joins
            (Debe haber una mejor forma de hacer esto)
         */
         File index = new File("/tmp/joins");
         deleteFolder(index);
-        //readPail();
+        
+        CassandraDatastax client = new CassandraDatastax();
+        client.connect("127.0.0.1");
+      
+        client.loadData();
+        client.close(); 
+       
         
     }
     
