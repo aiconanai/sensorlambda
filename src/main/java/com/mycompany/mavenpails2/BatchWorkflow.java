@@ -63,7 +63,7 @@ import org.apache.thrift.TException;
  *
  * @author fedora
  */
-public class PailMove {
+public class BatchWorkflow {
     
     public static final String TEMP_DIR = "/tmp/swa";
     public static final String NEW_DATA_LOCATION = "/tmp/newData";
@@ -302,7 +302,7 @@ public class PailMove {
         try {
             client.get(domain, key);
         } catch (DomainNotFoundException | HostsDownException | DomainNotLoadedException | TException ex) {
-            Logger.getLogger(PailMove.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(BatchWorkflow.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     
