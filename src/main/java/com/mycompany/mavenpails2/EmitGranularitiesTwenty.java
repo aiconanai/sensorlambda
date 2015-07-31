@@ -15,7 +15,7 @@ import cascalog.CascalogFunction;
  * @author francisco
  * Clase creada para emitir granularidades de hora, día, semana y mes.
  */
-public class EmitGranularitiesAcc extends CascalogFunction{
+public class EmitGranularitiesTwenty extends CascalogFunction{
     @Override
     public void operate(FlowProcess process, FunctionCall call){
         int twentyBucket = call.getArguments().getInteger(0);

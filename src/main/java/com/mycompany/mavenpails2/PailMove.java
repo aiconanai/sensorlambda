@@ -245,7 +245,7 @@ public class PailMove {
                 .predicate(new AbsMax(), "?value").out("?absmax");
         Subquery a = new Subquery("?id", "?gran", "?bucket", "?absmax2")
                 .predicate(z, "?id", "?twenty", "?absmax")
-                .predicate(new EmitGranularitiesAcc(), "?twenty")
+                .predicate(new EmitGranularitiesTwenty(), "?twenty")
                     .out("?gran", "?bucket")
                 .predicate(new AbsMax(), "?absmax").out("?absmax2");
         return a;
@@ -335,7 +335,7 @@ public class PailMove {
         y la desmembra para insertar sus datos en el newDataPail.
         */
         
-       /*Pail.TypedRecordOutputStream out = newDataPail.openWrite();
+       Pail.TypedRecordOutputStream out = newDataPail.openWrite();
        PailMove c = new PailMove();
        Class cls = c.getClass(); 
        File file = new File(cls.getClassLoader().getResource("dataset.txt").getFile());
@@ -379,7 +379,7 @@ public class PailMove {
 		scanner.close();
 	} catch (IOException e) {
 		e.printStackTrace();
-	} */
+	} 
         // shred();
         
         
@@ -391,7 +391,7 @@ public class PailMove {
         prepWork();
         //Finalmente se calculan las Batch Views.
         
-        Object source = Api.hfsSeqfile("/tmp/accel");
+        //Object source = Api.hfsSeqfile("/tmp/accel");
         Api.execute(new StdoutTap(), TempBatchView());
         Api.execute(new StdoutTap(), AnemBatchView1());
         Api.execute(new StdoutTap(), AnemBatchView2());
