@@ -11,7 +11,7 @@ package com.mycompany.mavenpails2;
  * @author fedora
  */
 public class GenerateData {
-   public static Data setValue(long sensorId, int timestamp, long value)
+   public static Data setValue(long sensorId, int timestamp, double value)
     {
         Pedigree pedigree = new Pedigree(timestamp);
         Sensor sensor = new Sensor(Sensor._Fields.SENSOR_ID, sensorId);

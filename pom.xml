@@ -56,7 +56,7 @@
   <configuration>
     <archive>
       <manifest>
-        <mainClass>com.mycompany.mavenpails2.PailMove</mainClass>
+        <mainClass>com.mycompany.mavenpails2.BatchWorkflow</mainClass>
       </manifest>
     </archive>
   </configuration>
@@ -159,13 +159,15 @@
         <dependency>
       <groupId>org.apache.storm</groupId>
       <artifactId>storm-core</artifactId>
-      <version>0.9.4</version>
+      <version>0.10.0-beta</version>
     </dependency>
     <dependency>
       <groupId>org.apache.storm</groupId>
       <artifactId>storm-kafka</artifactId>
       <version>0.9.4</version>
+      <type>jar</type>
     </dependency>
+
     <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka_2.9.2</artifactId>
