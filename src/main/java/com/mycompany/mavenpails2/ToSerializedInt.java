@@ -19,10 +19,10 @@ public class ToSerializedInt extends CascalogFunction {
     
     @Override
     public void operate(FlowProcess process, FunctionCall call){
-        int val = call.getArguments().getInteger(0);
+        double val = call.getArguments().getDouble(0);
         
         ByteBuffer buffer = ByteBuffer.allocate(4);
-        buffer.putInt(val);
+        buffer.putDouble(val);
         
         call.getOutputCollector().add(new Tuple(buffer.array()));
     }
