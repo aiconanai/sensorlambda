@@ -21,7 +21,7 @@ public class CassandraDatastax {
     public Session getSession(){
         return this.session;
     }
-    
+    //Método para establecer la conexión
     public void connect(String node){
         cluster = Cluster.builder()
          .addContactPoint(node)
